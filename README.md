@@ -27,6 +27,20 @@ A point-based daily rating app that tracks your activities and generates statist
   - Daily usage graph (shown when submissions > 2)
   - Full submission history with notes
 
+### Leaderboard
+- Rankings by points (7d/30d/all-time), with progress bars and streak display
+- Rival system: create rivals with personality traits and anomaly chances
+- Rivals auto-generate daily scores based on their personality
+- Click a rival to see a side-by-side comparison (per-set breakdown, activity gaps, win/loss/tie record)
+- **Points Over Time** chart: hide/show line graph with one line per user and each rival, filtered by 7d/30d/all-time
+
+### Set Locking
+- Lock (deactivate) sets in Settings to hide them from the set selection menu
+- Locked sets still appear in Settings and Statistics
+
+### Streaks
+- Current streak, longest streak, and today's status shown on the Sets screen
+
 ### Backup
 - Export all data to a JSON file
 - Import from a JSON file to restore
