@@ -6,6 +6,7 @@ interface SettingsProps {
   onAddSet: (name: string) => void;
   onDeleteSet: (setId: string) => void;
   onRenameSet: (setId: string, newName: string) => void;
+  onToggleSetActive: (setId: string) => void;
   onAddActivity: (setId: string, name: string, points: number) => void;
   onDeleteActivity: (setId: string, activityId: string) => void;
   onEditActivity: (setId: string, activityId: string, name: string, points: number) => void;
@@ -21,6 +22,7 @@ export default function Settings({
   onAddSet,
   onDeleteSet,
   onRenameSet,
+  onToggleSetActive,
   onAddActivity,
   onDeleteActivity,
   onEditActivity,
@@ -215,7 +217,12 @@ export default function Settings({
                     </div>
                   ) : (
                     <>
-                      <span className="font-medium text-gray-200">{set.name}</span>
+                      <span className={`font-medium ${set.deactivated ? 'text-gray-500' : 'text-gray-200'}`}>
+                        {set.name}
+                      </span>
+                      {set.deactivated && (
+                        <span className="text-xs text-gray-600 ml-2">(locked)</span>
+                      )}
                       <span className="text-gray-500 text-sm ml-2">
                         ({set.activities.length} {set.activities.length === 1 ? 'activity' : 'activities'})
                       </span>
@@ -231,6 +238,12 @@ export default function Settings({
                       Rename
                     </button>
                   )}
+                  <button
+                    onClick={(e) => { e.stopPropagation(); onToggleSetActive(set.id); }}
+                    className={`text-sm px-2 ${set.deactivated ? 'text-green-400 hover:text-green-300' : 'text-gray-400 hover:text-gray-200'}`}
+                  >
+                    {set.deactivated ? 'Unlock' : 'Lock'}
+                  </button>
                   <button
                     onClick={() => onDeleteSet(set.id)}
                     className="text-red-400 hover:text-red-300 text-sm px-2"

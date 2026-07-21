@@ -1,36 +1,54 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { loadData, saveData } from './dataService';
-import type { AppData, ActivitySet, Submission, View } from './types';
+import type { AppData, ActivitySet, Submission, View, Rival, RivalPersonality } from './types';
 import { format, subDays, parseISO } from 'date-fns';
 import SetSelection from './components/SetSelection';
 import ActivityList from './components/ActivityList';
 import Statistics from './components/Statistics';
 import Settings from './components/Settings';
+import Leaderboard from './components/Leaderboard';
+import { generateRivalHistory } from './utils/rivalEngine';
 
 function App() {
-  const [data, setData] = useState<AppData>({ sets: [], submissions: [] });
+  const [data, setData] = useState<AppData>({ sets: [], submissions: [], users: [], rivals: [], rivalSubmissions: [] });
   const [loaded, setLoaded] = useState(false);
   const [currentView, setCurrentView] = useState<View>('sets');
   const [selectedSetId, setSelectedSetId] = useState<string | null>(null);
 
   useEffect(() => {
-    // One-time migration from localStorage
-    const stored = localStorage.getItem('day-rating-data');
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      saveData(parsed).then(() => {
+    const loadDataAndRivals = async () => {
+      let appData: AppData;
+      const stored = localStorage.getItem('day-rating-data');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        await saveData(parsed);
         localStorage.removeItem('day-rating-data');
-        setData(parsed);
-        setLoaded(true);
-      });
-    } else {
-      loadData().then(d => { setData(d); setLoaded(true); });
-    }
+        appData = { ...parsed, rivals: parsed.rivals ?? [], rivalSubmissions: parsed.rivalSubmissions ?? [] };
+      } else {
+        appData = await loadData();
+        appData = { ...appData, rivals: appData.rivals ?? [], rivalSubmissions: appData.rivalSubmissions ?? [] };
+      }
+      setData(appData);
+
+      // Migrate rival submissions from localStorage if present
+      const storedRivals = localStorage.getItem('rival-submissions');
+      if (storedRivals) {
+        const migrated = JSON.parse(storedRivals);
+        setData(prev => ({ ...prev, rivalSubmissions: [...prev.rivalSubmissions, ...migrated] }));
+        localStorage.removeItem('rival-submissions');
+        localStorage.removeItem('leaderboard-last-gen');
+      }
+
+      setLoaded(true);
+    };
+    loadDataAndRivals();
   }, []);
 
   useEffect(() => {
     if (loaded) saveData(data);
   }, [data, loaded]);
+
+  const today = new Date().toISOString().split('T')[0];
 
   const handleSelectSet = (setId: string) => {
     setSelectedSetId(setId);
@@ -41,7 +59,6 @@ function App() {
   };
 
   const handleSubmit = (setId: string, activitiesChecked: string[], bonusesChecked: string[], totalPoints: number, note: string) => {
-    const today = new Date().toISOString().split('T')[0];
     const newSubmission: Submission = {
       id: Date.now().toString(),
       date: today,
@@ -51,10 +68,15 @@ function App() {
       totalPoints,
       note: note || undefined,
     };
-    setData(prev => ({
-      ...prev,
-      submissions: [...prev.submissions, newSubmission],
-    }));
+    setData(prev => {
+      const existingIndex = prev.submissions.findIndex(s => s.date === today && s.setId === setId);
+      if (existingIndex !== -1) {
+        const updated = [...prev.submissions];
+        updated[existingIndex] = { ...updated[existingIndex], activitiesChecked, bonusesChecked, totalPoints, note: note || undefined };
+        return { ...prev, submissions: updated };
+      }
+      return { ...prev, submissions: [...prev.submissions, newSubmission] };
+    });
     setSelectedSetId(null);
   };
 
@@ -63,6 +85,15 @@ function App() {
       ...prev,
       sets: prev.sets.map(set =>
         set.id === setId ? { ...set, name: newName } : set
+      ),
+    }));
+  };
+
+  const handleToggleSetActive = (setId: string) => {
+    setData(prev => ({
+      ...prev,
+      sets: prev.sets.map(set =>
+        set.id === setId ? { ...set, deactivated: !set.deactivated } : set
       ),
     }));
   };
@@ -196,13 +227,61 @@ function App() {
     try {
       const parsed = JSON.parse(json);
       if (parsed && typeof parsed === 'object' && Array.isArray(parsed.sets) && Array.isArray(parsed.submissions)) {
-        setData(parsed);
+        setData({ ...parsed, users: parsed.users ?? [], rivals: parsed.rivals ?? [] });
       } else {
         alert('Invalid backup file: missing sets or submissions');
       }
     } catch {
       alert('Invalid JSON file');
     }
+  };
+
+  const handleAddUser = (name: string) => {
+    const newUser = {
+      id: Date.now().toString(),
+      name,
+    };
+    setData(prev => ({
+      ...prev,
+      users: [...prev.users, newUser],
+    }));
+  };
+
+  const handleDeleteUser = (userId: string) => {
+    setData(prev => ({
+      ...prev,
+      users: prev.users.filter(u => u.id !== userId),
+    }));
+  };
+
+  const handleAddRival = (name: string, personality: RivalPersonality, anomalyChance: number) => {
+    const newRival: Rival = {
+      id: `rival-${Date.now()}`,
+      name,
+      personality,
+      anomalyChance,
+      createdAt: new Date().toISOString().split('T')[0],
+      lastGenerated: new Date().toISOString().split('T')[0],
+    };
+    setData(prev => ({
+      ...prev,
+      rivals: [...prev.rivals, newRival],
+    }));
+  };
+
+  const handleDeleteRival = (rivalId: string) => {
+    setData(prev => ({
+      ...prev,
+      rivals: prev.rivals.filter(r => r.id !== rivalId),
+      rivalSubmissions: prev.rivalSubmissions.filter(s => !s.id.startsWith(rivalId)),
+    }));
+  };
+
+  const handleUpdateRivals = (newSubmissions: Submission[]) => {
+    setData(prev => ({
+      ...prev,
+      rivalSubmissions: [...prev.rivalSubmissions, ...newSubmissions],
+    }));
   };
 
   const selectedSet = data.sets.find(s => s.id === selectedSetId);
@@ -282,6 +361,16 @@ function App() {
           >
             Settings
           </button>
+          <button
+            onClick={() => { setCurrentView('leaderboard'); setSelectedSetId(null); }}
+            className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+              currentView === 'leaderboard'
+                ? 'bg-purple-600 text-white'
+                : 'text-gray-400 hover:text-white'
+            }`}
+          >
+            Leaderboard
+          </button>
         </nav>
       </header>
 
@@ -290,6 +379,7 @@ function App() {
           selectedSet ? (
             <ActivityList
               set={selectedSet}
+              existingSubmission={data.submissions.find(s => s.date === today && s.setId === selectedSet.id)}
               onBack={handleBackToSets}
               onSubmit={handleSubmit}
             />
@@ -338,6 +428,7 @@ function App() {
             onAddSet={handleAddSet}
             onDeleteSet={handleDeleteSet}
             onRenameSet={handleRenameSet}
+            onToggleSetActive={handleToggleSetActive}
             onAddActivity={handleAddActivity}
             onDeleteActivity={handleDeleteActivity}
             onEditActivity={handleEditActivity}
@@ -346,6 +437,21 @@ function App() {
             onDeleteBonus={handleDeleteBonus}
             onExport={handleExport}
             onImport={handleImport}
+          />
+        )}
+
+        {currentView === 'leaderboard' && (
+          <Leaderboard
+            users={data.users}
+            submissions={data.submissions}
+            sets={data.sets}
+            rivals={data.rivals}
+            rivalSubmissions={data.rivalSubmissions}
+            onAddUser={handleAddUser}
+            onDeleteUser={handleDeleteUser}
+            onAddRival={handleAddRival}
+            onDeleteRival={handleDeleteRival}
+            onUpdateRivals={handleUpdateRivals}
           />
         )}
       </main>

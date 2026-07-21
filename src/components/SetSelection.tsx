@@ -6,7 +6,9 @@ interface SetSelectionProps {
 }
 
 export default function SetSelection({ sets, onSelectSet }: SetSelectionProps) {
-  if (sets.length === 0) {
+  const activeSets = sets.filter(s => !s.deactivated);
+
+  if (activeSets.length === 0) {
     return (
       <div className="text-center py-12">
         <p className="text-gray-500">No sets available</p>
@@ -18,7 +20,7 @@ export default function SetSelection({ sets, onSelectSet }: SetSelectionProps) {
   return (
     <div className="space-y-2">
       <h2 className="text-lg font-semibold mb-4 text-gray-200">Select a Set</h2>
-      {sets.map(set => {
+      {activeSets.map(set => {
         const totalPoints = set.activities.reduce((sum, a) => sum + a.points, 0);
         const bonusPoints = set.activities.reduce((sum, a) => sum + (a.bonus?.points ?? 0), 0);
         return (

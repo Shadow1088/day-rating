@@ -28,6 +28,38 @@ function calcMedian(values: number[]): number {
 
 export default function Statistics({ sets, submissions }: StatisticsProps) {
   const [selectedSetId, setSelectedSetId] = useState<string | null>(null);
+  const [showDevelopment, setShowDevelopment] = useState(false);
+  const [devTimeframe, setDevTimeframe] = useState<'week' | 'month' | 'all'>('month');
+
+  const devData = useMemo(() => {
+    const days = devTimeframe === 'week' ? 7 : devTimeframe === 'month' ? 30 : null;
+
+    const dateMap: Record<string, number> = {};
+    submissions.forEach(s => {
+      dateMap[s.date] = (dateMap[s.date] || 0) + s.totalPoints;
+    });
+
+    let dayList: Date[];
+    if (days) {
+      dayList = eachDayOfInterval({ start: subDays(new Date(), days - 1), end: new Date() });
+    } else {
+      const allDates = Object.keys(dateMap).sort();
+      if (allDates.length === 0) return [];
+      dayList = eachDayOfInterval({ start: parseISO(allDates[0]), end: new Date() });
+    }
+
+    let cumulative = 0;
+    return dayList.map(date => {
+      const dateStr = format(date, 'yyyy-MM-dd');
+      const pts = dateMap[dateStr] || 0;
+      cumulative += pts;
+      return {
+        date: format(date, 'MMM d'),
+        points: pts,
+        cumulative,
+      };
+    });
+  }, [submissions, devTimeframe]);
 
   const mainStatsData = useMemo(() => {
     const last30Days = Array.from({ length: 30 }, (_, i) => {
@@ -281,6 +313,63 @@ export default function Statistics({ sets, submissions }: StatisticsProps) {
           </div>
         )}
       </div>
+
+      {/* Development Chart */}
+      {submissions.length > 0 && (
+        <div className="p-4 rounded-lg bg-gray-900 border border-gray-800">
+          <div className="flex items-center justify-between mb-4">
+            <button
+              onClick={() => setShowDevelopment(!showDevelopment)}
+              className="text-sm font-medium text-gray-400 hover:text-gray-200 transition-colors cursor-pointer"
+            >
+              {showDevelopment ? '▾' : '▸'} Development
+            </button>
+            {showDevelopment && (
+              <div className="flex gap-1 bg-gray-800 rounded-lg p-0.5">
+                {(['week', 'month', 'all'] as const).map(tf => (
+                  <button
+                    key={tf}
+                    onClick={() => setDevTimeframe(tf)}
+                    className={`px-3 py-1 text-xs rounded-md transition-colors cursor-pointer ${
+                      devTimeframe === tf
+                        ? 'bg-purple-600 text-white'
+                        : 'text-gray-400 hover:text-gray-200'
+                    }`}
+                  >
+                    {tf === 'week' ? '7 Days' : tf === 'month' ? '30 Days' : 'All Time'}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+          {showDevelopment && (
+            <div className="h-56">
+              {devData.length === 0 ? (
+                <p className="text-gray-500 text-center py-8">No data for this period</p>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={devData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                    <XAxis
+                      dataKey="date"
+                      tick={{ fill: '#6b7280', fontSize: 10 }}
+                      interval={devTimeframe === 'all' ? Math.floor(devData.length / 10) : devTimeframe === 'month' ? 6 : 0}
+                    />
+                    <YAxis tick={{ fill: '#6b7280', fontSize: 10 }} />
+                    <Tooltip
+                      contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '8px' }}
+                      labelStyle={{ color: '#9ca3af' }}
+                    />
+                    <Legend wrapperStyle={{ color: '#9ca3af', fontSize: '12px' }} />
+                    <Line type="monotone" dataKey="points" name="Daily" stroke="#a78bfa" strokeWidth={2} dot={false} />
+                    <Line type="monotone" dataKey="cumulative" name="Cumulative" stroke="#22d3ee" strokeWidth={2} dot={false} />
+                  </LineChart>
+                </ResponsiveContainer>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Set Cards */}
       <div className="p-4 rounded-lg bg-gray-900 border border-gray-800">
