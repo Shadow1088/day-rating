@@ -1,32 +1,53 @@
-# React + TypeScript + Vite
+# Day Rating
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+A point-based daily rating app that tracks your activities and generates statistics over time.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+### Sets
+- Create, rename, and delete activity sets
+- Each set contains activities with hardcoded point rewards
+- Activities support an optional bonus (extra points for more specific conditions)
+- Drag-and-drop to reorder activities within a set
 
-## React Compiler
+### Activity Checking
+- Select a set to view its activities
+- Click activities to check them (crossed out, points highlighted)
+- Bonuses appear as sub-items only when their parent activity is checked
+- Optional text note on each submission
+- Submit records the day's score to history
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### Statistics
+- **Activity Days**: bar chart showing which of the last 30 days had submissions
+- **Set Cards**: all sets listed, sorted by submission count
+- **Set Detail Page**:
+  - Summary stats: average, min, max, median points
+  - Development line chart (rolling avg/min/max/med across submissions)
+  - Points per submission bar chart
+  - Daily usage graph (shown when submissions > 2)
+  - Full submission history with notes
 
-## Expanding the Oxlint configuration
+### Backup
+- Export all data to a JSON file
+- Import from a JSON file to restore
 
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
+## Tech Stack
 
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+- React 19 + TypeScript
+- Vite
+- Tailwind CSS
+- Recharts (charts)
+- date-fns (date utilities)
+- Express 5 (API server)
+- Data persisted in `data.json` via REST API
+
+## Running
+
+```bash
+npm run dev      # Vite + Express dev servers
+npm run start    # Build and run production server on port 3001
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+## Data
+
+All data is stored in `data.json` at the project root. Export/import available in Settings.
