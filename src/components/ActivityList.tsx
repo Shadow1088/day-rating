@@ -1,8 +1,9 @@
-import { useState } from 'react';
-import type { ActivitySet } from '../types';
+import { useState, useEffect } from 'react';
+import type { ActivitySet, Submission } from '../types';
 
 interface ActivityListProps {
   set: ActivitySet;
+  existingSubmission?: Submission;
   onBack: () => void;
   onSubmit: (
     setId: string,
@@ -13,17 +14,30 @@ interface ActivityListProps {
   ) => void;
 }
 
-export default function ActivityList({ set, onBack, onSubmit }: ActivityListProps) {
-  const [checkedActivities, setCheckedActivities] = useState<Set<string>>(new Set());
-  const [checkedBonuses, setCheckedBonuses] = useState<Set<string>>(new Set());
-  const [note, setNote] = useState('');
+export default function ActivityList({ set, existingSubmission, onBack, onSubmit }: ActivityListProps) {
+  const [checkedActivities, setCheckedActivities] = useState<Set<string>>(() => {
+    if (existingSubmission) return new Set(existingSubmission.activitiesChecked);
+    return new Set();
+  });
+  const [checkedBonuses, setCheckedBonuses] = useState<Set<string>>(() => {
+    if (existingSubmission) return new Set(existingSubmission.bonusesChecked);
+    return new Set();
+  });
+  const [note, setNote] = useState(existingSubmission?.note ?? '');
+
+  useEffect(() => {
+    if (existingSubmission) {
+      setCheckedActivities(new Set(existingSubmission.activitiesChecked));
+      setCheckedBonuses(new Set(existingSubmission.bonusesChecked));
+      setNote(existingSubmission.note ?? '');
+    }
+  }, [existingSubmission]);
 
   const toggleActivity = (activityId: string) => {
     setCheckedActivities(prev => {
       const next = new Set(prev);
       if (next.has(activityId)) {
         next.delete(activityId);
-        // Uncheck bonus when activity is unchecked
         const activity = set.activities.find(a => a.id === activityId);
         if (activity?.bonus) {
           setCheckedBonuses(bonuses => {
@@ -83,6 +97,9 @@ export default function ActivityList({ set, onBack, onSubmit }: ActivityListProp
           ← Back
         </button>
         <h2 className="text-lg font-semibold text-gray-200">{set.name}</h2>
+        {existingSubmission && (
+          <span className="text-xs text-gray-500 ml-auto">Editing today's submission</span>
+        )}
       </div>
 
       <div className="space-y-1">
@@ -151,7 +168,7 @@ export default function ActivityList({ set, onBack, onSubmit }: ActivityListProp
             onClick={handleSubmit}
             className="w-full py-2 px-4 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-medium transition-colors"
           >
-            Submit Day
+            {existingSubmission ? 'Update Submission' : 'Submit Day'}
           </button>
         </div>
       )}

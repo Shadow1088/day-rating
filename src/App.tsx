@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { loadData, saveData } from './dataService';
 import type { AppData, ActivitySet, Submission, View } from './types';
+import { format, subDays, parseISO } from 'date-fns';
 import SetSelection from './components/SetSelection';
 import ActivityList from './components/ActivityList';
 import Statistics from './components/Statistics';
@@ -206,6 +207,46 @@ function App() {
 
   const selectedSet = data.sets.find(s => s.id === selectedSetId);
 
+  const { currentStreak, longestStreak, todaySubmitted } = useMemo(() => {
+    const dates = [...new Set(data.submissions.map(s => s.date))].sort().reverse();
+    if (dates.length === 0) return { currentStreak: 0, longestStreak: 0, todaySubmitted: false };
+
+    const today = format(new Date(), 'yyyy-MM-dd');
+    const todaySub = dates.includes(today);
+
+    // Current streak: count backwards from today (or yesterday if not submitted today)
+    let current = 0;
+    let checkDate = todaySub ? new Date() : subDays(new Date(), 1);
+    while (true) {
+      const dateStr = format(checkDate, 'yyyy-MM-dd');
+      if (dates.includes(dateStr)) {
+        current++;
+        checkDate = subDays(checkDate, 1);
+      } else {
+        break;
+      }
+    }
+
+    // Longest streak: scan all sorted unique dates
+    let longest = 1;
+    let run = 1;
+    const sorted = [...dates].sort();
+    for (let i = 1; i < sorted.length; i++) {
+      const prev = parseISO(sorted[i - 1]);
+      const curr = parseISO(sorted[i]);
+      const diffDays = Math.round((curr.getTime() - prev.getTime()) / 86400000);
+      if (diffDays === 1) {
+        run++;
+        if (run > longest) longest = run;
+      } else {
+        run = 1;
+      }
+    }
+    if (dates.length === 1) longest = 1;
+
+    return { currentStreak: current, longestStreak: longest, todaySubmitted: todaySub };
+  }, [data.submissions]);
+
   return (
     <div className="min-h-screen bg-gray-950 text-gray-100">
       <header className="bg-gray-900 border-b border-gray-800 px-4 py-4">
@@ -253,10 +294,34 @@ function App() {
               onSubmit={handleSubmit}
             />
           ) : (
-            <SetSelection
-              sets={data.sets}
-              onSelectSet={handleSelectSet}
-            />
+            <>
+              {data.submissions.length > 0 && (
+                <div className="flex gap-3 mb-4">
+                  <div className="flex-1 p-3 rounded-lg bg-gray-900 border border-gray-800 text-center">
+                    <div className="text-gray-500 text-xs mb-1">STREAK</div>
+                    <div className={`text-2xl font-bold ${currentStreak > 0 ? 'text-amber-400' : 'text-gray-600'}`}>
+                      {currentStreak}
+                    </div>
+                    <div className="text-gray-600 text-xs">{currentStreak === 1 ? 'day' : 'days'}</div>
+                  </div>
+                  <div className="flex-1 p-3 rounded-lg bg-gray-900 border border-gray-800 text-center">
+                    <div className="text-gray-500 text-xs mb-1">BEST</div>
+                    <div className="text-2xl font-bold text-gray-400">{longestStreak}</div>
+                    <div className="text-gray-600 text-xs">{longestStreak === 1 ? 'day' : 'days'}</div>
+                  </div>
+                  <div className="flex-1 p-3 rounded-lg bg-gray-900 border border-gray-800 text-center">
+                    <div className="text-gray-500 text-xs mb-1">TODAY</div>
+                    <div className={`text-2xl font-bold ${todaySubmitted ? 'text-green-400' : 'text-gray-600'}`}>
+                      {todaySubmitted ? 'Done' : '---'}
+                    </div>
+                  </div>
+                </div>
+              )}
+              <SetSelection
+                sets={data.sets}
+                onSelectSet={handleSelectSet}
+              />
+            </>
           )
         )}
 
