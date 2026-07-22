@@ -65,3 +65,15 @@ npm run start    # Build and run production server on port 3001
 ## Data
 
 All data is stored in `data.json` at the project root. Export/import available in Settings.
+
+# Psychology
+
+Its a point rewarding day rating virtual competition with analysis and insights and versatility.
+You define your own set of activities with possible extensions and complete them for a point reward.
+
+so its fun and person feels like consistency is necessary - its a competition against algorythms,
+giving you a feeling of actually falling behind and forcing you to focus more
+
+and because every activity has precisely crafted reward,
+you feel like missing out on it will give you disadvantage against others
+and that its necessary to do it even if you dont want to
