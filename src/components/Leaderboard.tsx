@@ -29,7 +29,18 @@ interface LeaderboardProps {
 }
 
 const GENERATION_COOLDOWN_MS = 30000;
-const USER_COLORS = ['#a78bfa', '#22d3ee', '#fbbf24', '#f87171', '#4ade80', '#fb923c', '#e879f9'];
+const USER_COLOR_MAP: Record<string, string> = {
+  '__me__': '#ef4444',
+  'Painter': '#22d3ee',
+  'Booker': '#fbbf24',
+  'Davy': '#4ade80',
+  'Rock': '#fb923c',
+  'Matt': '#e879f9',
+  'Maniac': '#a78bfa',
+  'Slacker': '#f87171',
+  'Anon': '#60a5fa',
+};
+const FALLBACK_COLORS = ['#22d3ee', '#fbbf24', '#4ade80', '#fb923c', '#e879f9', '#a78bfa'];
 
 export default function Leaderboard({
   users,
@@ -355,19 +366,48 @@ export default function Leaderboard({
                     <Tooltip
                       contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '8px' }}
                       labelStyle={{ color: '#9ca3af' }}
+                      formatter={(value: any, name: any) => [`${value} pts`, String(name)]}
+                      itemSorter={(item: any) => -item.value}
                     />
-                    <Legend wrapperStyle={{ color: '#9ca3af', fontSize: '12px' }} />
-                    {lbData.users.map((u, i) => (
-                      <Line
-                        key={u.id}
-                        type="monotone"
-                        dataKey={u.id}
-                        name={u.name}
-                        stroke={USER_COLORS[i % USER_COLORS.length]}
-                        strokeWidth={2}
-                        dot={false}
-                      />
-                    ))}
+                    <Legend
+                      content={() => {
+                        const lastRow = lbData.data[lbData.data.length - 1];
+                        const sorted = [...lbData.users].sort((a, b) => ((lastRow?.[b.id] as number) ?? 0) - ((lastRow?.[a.id] as number) ?? 0));
+                        return (
+                          <div className="flex flex-wrap justify-center gap-x-3 gap-y-1 mt-2">
+                            {sorted.map(u => {
+                              const color = USER_COLOR_MAP[u.id] ?? (() => {
+                                const idx = lbData.users.filter(v => !(v.id in USER_COLOR_MAP) && lbData.users.indexOf(v) < lbData.users.indexOf(u)).length;
+                                return FALLBACK_COLORS[idx % FALLBACK_COLORS.length];
+                              })();
+                              return (
+                                <div key={u.id} className="flex items-center gap-1.5 text-xs text-gray-400">
+                                  <span className="w-2.5 h-2.5 rounded-full inline-block" style={{ backgroundColor: color }} />
+                                  {u.name}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        );
+                      }}
+                    />
+                    {lbData.users.map((u) => {
+                      const color = USER_COLOR_MAP[u.id] ?? (() => {
+                        const idx = lbData.users.filter(v => !(v.id in USER_COLOR_MAP) && lbData.users.indexOf(v) < lbData.users.indexOf(u)).length;
+                        return FALLBACK_COLORS[idx % FALLBACK_COLORS.length];
+                      })();
+                      return (
+                        <Line
+                          key={u.id}
+                          type="monotone"
+                          dataKey={u.id}
+                          name={u.name}
+                          stroke={color}
+                          strokeWidth={2}
+                          dot={false}
+                        />
+                      );
+                    })}
                   </LineChart>
                 </ResponsiveContainer>
               )}

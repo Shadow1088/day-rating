@@ -287,8 +287,8 @@ export function calculateRivalStreak(
   const today = new Date().toISOString().split('T')[0];
   const todaySub = dates.includes(today);
 
-  let current = 0;
-  let checkDate = todaySub ? new Date() : new Date();
+  let current = todaySub ? 1 : 0;
+  let checkDate = new Date();
   checkDate.setDate(checkDate.getDate() - 1);
 
   while (true) {
