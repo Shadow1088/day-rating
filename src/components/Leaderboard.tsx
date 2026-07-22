@@ -124,8 +124,33 @@ export default function Leaderboard({
     ).size;
   };
 
+  const getUserStreak = (userId?: string) => {
+    const dates = [...new Set(
+      submissions
+        .filter(s => {
+          const isUser = userId ? s.userId === userId : !s.userId;
+          return isUser;
+        })
+        .map(s => s.date)
+    )].sort().reverse();
+    if (dates.length === 0) return 0;
+    const today = new Date().toISOString().split('T')[0];
+    const todaySub = dates.includes(today);
+    let current = 0;
+    const checkDate = new Date();
+    if (!todaySub) checkDate.setDate(checkDate.getDate() - 1);
+    while (true) {
+      const dateStr = checkDate.toISOString().split('T')[0];
+      if (dates.includes(dateStr)) {
+        current++;
+        checkDate.setDate(checkDate.getDate() - 1);
+      } else break;
+    }
+    return current;
+  };
+
   const rankings = [
-    { id: undefined, name: 'You', points: getUserPoints(), days: getUserDays(), streak: 0, isRival: false },
+    { id: undefined, name: 'You', points: getUserPoints(), days: getUserDays(), streak: getUserStreak(), isRival: false },
     ...(users ?? []).map(u => ({
       id: u.id,
       name: u.name,
