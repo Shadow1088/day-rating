@@ -16,6 +16,8 @@ export interface ActivitySet {
   name: string;
   activities: Activity[];
   deactivated?: boolean;
+  global?: boolean;
+  ownerUserId?: string;
 }
 
 export interface Submission {
@@ -51,6 +53,7 @@ export interface Rival {
   anomalyChance: number;
   createdAt: string;
   lastGenerated: string;
+  ownerUserId?: string;
 }
 
 export interface AppData {

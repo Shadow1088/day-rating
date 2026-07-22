@@ -5,6 +5,9 @@ const API_URL = '/api/data';
 const defaultData: AppData = {
   sets: [],
   submissions: [],
+  users: [],
+  rivals: [],
+  rivalSubmissions: [],
 };
 
 export const loadData = async (): Promise<AppData> => {

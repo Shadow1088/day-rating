@@ -1,19 +1,22 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { loadData, saveData } from './dataService';
-import type { AppData, ActivitySet, Submission, View, Rival, RivalPersonality } from './types';
+import type { AppData, ActivitySet, Submission, View, Rival, RivalPersonality, User } from './types';
 import { format, subDays, parseISO } from 'date-fns';
 import SetSelection from './components/SetSelection';
 import ActivityList from './components/ActivityList';
 import Statistics from './components/Statistics';
 import Settings from './components/Settings';
 import Leaderboard from './components/Leaderboard';
-import { generateRivalHistory } from './utils/rivalEngine';
 
 function App() {
   const [data, setData] = useState<AppData>({ sets: [], submissions: [], users: [], rivals: [], rivalSubmissions: [] });
   const [loaded, setLoaded] = useState(false);
   const [currentView, setCurrentView] = useState<View>('sets');
   const [selectedSetId, setSelectedSetId] = useState<string | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | undefined>(() => {
+    const stored = localStorage.getItem('day-rating-current-user');
+    return stored || undefined;
+  });
 
   useEffect(() => {
     const loadDataAndRivals = async () => {
@@ -48,6 +51,14 @@ function App() {
     if (loaded) saveData(data);
   }, [data, loaded]);
 
+  useEffect(() => {
+    if (currentUserId !== undefined) {
+      localStorage.setItem('day-rating-current-user', currentUserId);
+    } else {
+      localStorage.removeItem('day-rating-current-user');
+    }
+  }, [currentUserId]);
+
   const today = new Date().toISOString().split('T')[0];
 
   const handleSelectSet = (setId: string) => {
@@ -67,9 +78,12 @@ function App() {
       bonusesChecked,
       totalPoints,
       note: note || undefined,
+      userId: isCurrentUser ? undefined : currentUserId,
     };
     setData(prev => {
-      const existingIndex = prev.submissions.findIndex(s => s.date === today && s.setId === setId);
+      const existingIndex = prev.submissions.findIndex(s =>
+        s.date === today && s.setId === setId && (isCurrentUser ? !s.userId : s.userId === currentUserId)
+      );
       if (existingIndex !== -1) {
         const updated = [...prev.submissions];
         updated[existingIndex] = { ...updated[existingIndex], activitiesChecked, bonusesChecked, totalPoints, note: note || undefined };
@@ -94,6 +108,15 @@ function App() {
       ...prev,
       sets: prev.sets.map(set =>
         set.id === setId ? { ...set, deactivated: !set.deactivated } : set
+      ),
+    }));
+  };
+
+  const handleToggleSetGlobal = (setId: string) => {
+    setData(prev => ({
+      ...prev,
+      sets: prev.sets.map(set =>
+        set.id === setId ? { ...set, global: !set.global } : set
       ),
     }));
   };
@@ -135,6 +158,7 @@ function App() {
       id: Date.now().toString(),
       name,
       activities: [],
+      ownerUserId: isCurrentUser ? undefined : currentUserId,
     };
     setData(prev => ({
       ...prev,
@@ -237,7 +261,7 @@ function App() {
   };
 
   const handleAddUser = (name: string) => {
-    const newUser = {
+    const newUser: User = {
       id: Date.now().toString(),
       name,
     };
@@ -252,6 +276,9 @@ function App() {
       ...prev,
       users: prev.users.filter(u => u.id !== userId),
     }));
+    if (currentUserId === userId) {
+      setCurrentUserId(undefined);
+    }
   };
 
   const handleAddRival = (name: string, personality: RivalPersonality, anomalyChance: number) => {
@@ -262,6 +289,7 @@ function App() {
       anomalyChance,
       createdAt: new Date().toISOString().split('T')[0],
       lastGenerated: new Date().toISOString().split('T')[0],
+      ownerUserId: isCurrentUser ? undefined : currentUserId,
     };
     setData(prev => ({
       ...prev,
@@ -286,14 +314,26 @@ function App() {
 
   const selectedSet = data.sets.find(s => s.id === selectedSetId);
 
+  const isCurrentUser = currentUserId === undefined;
+
+  const mySubmissions = useMemo(() => {
+    return data.submissions.filter(s => isCurrentUser ? !s.userId : s.userId === currentUserId);
+  }, [data.submissions, currentUserId, isCurrentUser]);
+
+  const mySets = useMemo(() => {
+    return data.sets.filter(s => {
+      if (s.global) return true;
+      return isCurrentUser ? !s.ownerUserId || s.ownerUserId === undefined : s.ownerUserId === currentUserId;
+    });
+  }, [data.sets, currentUserId, isCurrentUser]);
+
   const { currentStreak, longestStreak, todaySubmitted } = useMemo(() => {
-    const dates = [...new Set(data.submissions.map(s => s.date))].sort().reverse();
+    const dates = [...new Set(mySubmissions.map(s => s.date))].sort().reverse();
     if (dates.length === 0) return { currentStreak: 0, longestStreak: 0, todaySubmitted: false };
 
     const today = format(new Date(), 'yyyy-MM-dd');
     const todaySub = dates.includes(today);
 
-    // Current streak: count backwards from today (or yesterday if not submitted today)
     let current = 0;
     let checkDate = todaySub ? new Date() : subDays(new Date(), 1);
     while (true) {
@@ -306,7 +346,6 @@ function App() {
       }
     }
 
-    // Longest streak: scan all sorted unique dates
     let longest = 1;
     let run = 1;
     const sorted = [...dates].sort();
@@ -324,12 +363,30 @@ function App() {
     if (dates.length === 1) longest = 1;
 
     return { currentStreak: current, longestStreak: longest, todaySubmitted: todaySub };
-  }, [data.submissions]);
+  }, [mySubmissions]);
+
+  const handleSwitchUser = (userId: string | undefined) => {
+    setCurrentUserId(userId);
+    setSelectedSetId(null);
+    setCurrentView('sets');
+  };
 
   return (
     <div className="min-h-screen bg-gray-950 text-gray-100">
       <header className="bg-gray-900 border-b border-gray-800 px-4 py-4">
-        <h1 className="text-xl font-bold text-center text-purple-400">Day Rating</h1>
+        <div className="flex items-center justify-between mb-3">
+          <h1 className="text-xl font-bold text-purple-400">Day Rating</h1>
+          <select
+            value={currentUserId || ''}
+            onChange={(e) => handleSwitchUser(e.target.value || undefined)}
+            className="bg-gray-800 border border-gray-700 text-gray-200 text-sm rounded px-2 py-1 cursor-pointer"
+          >
+            <option value="">You</option>
+            {data.users.map(u => (
+              <option key={u.id} value={u.id}>{u.name}</option>
+            ))}
+          </select>
+        </div>
         <nav className="flex justify-center gap-6 mt-3">
           <button
             onClick={() => { setCurrentView('sets'); setSelectedSetId(null); }}
@@ -379,13 +436,13 @@ function App() {
           selectedSet ? (
             <ActivityList
               set={selectedSet}
-              existingSubmission={data.submissions.find(s => s.date === today && s.setId === selectedSet.id)}
+              existingSubmission={mySubmissions.find(s => s.date === today && s.setId === selectedSet.id)}
               onBack={handleBackToSets}
               onSubmit={handleSubmit}
             />
           ) : (
             <>
-              {data.submissions.length > 0 && (
+              {mySubmissions.length > 0 && (
                 <div className="flex gap-3 mb-4">
                   <div className="flex-1 p-3 rounded-lg bg-gray-900 border border-gray-800 text-center">
                     <div className="text-gray-500 text-xs mb-1">STREAK</div>
@@ -408,7 +465,7 @@ function App() {
                 </div>
               )}
               <SetSelection
-                sets={data.sets}
+                sets={mySets}
                 onSelectSet={handleSelectSet}
               />
             </>
@@ -417,24 +474,28 @@ function App() {
 
         {currentView === 'statistics' && (
           <Statistics
-            sets={data.sets}
-            submissions={data.submissions}
+            sets={mySets}
+            submissions={mySubmissions}
           />
         )}
 
         {currentView === 'settings' && (
           <Settings
-            sets={data.sets}
+            sets={mySets}
+            users={data.users}
             onAddSet={handleAddSet}
             onDeleteSet={handleDeleteSet}
             onRenameSet={handleRenameSet}
             onToggleSetActive={handleToggleSetActive}
+            onToggleSetGlobal={handleToggleSetGlobal}
             onAddActivity={handleAddActivity}
             onDeleteActivity={handleDeleteActivity}
             onEditActivity={handleEditActivity}
             onReorderActivities={handleReorderActivities}
             onAddBonus={handleAddBonus}
             onDeleteBonus={handleDeleteBonus}
+            onAddUser={handleAddUser}
+            onDeleteUser={handleDeleteUser}
             onExport={handleExport}
             onImport={handleImport}
           />
@@ -447,7 +508,6 @@ function App() {
             sets={data.sets}
             rivals={data.rivals}
             rivalSubmissions={data.rivalSubmissions}
-            onAddUser={handleAddUser}
             onDeleteUser={handleDeleteUser}
             onAddRival={handleAddRival}
             onDeleteRival={handleDeleteRival}

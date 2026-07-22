@@ -3,32 +3,40 @@ import type { ActivitySet } from '../types';
 
 interface SettingsProps {
   sets: ActivitySet[];
+  users: Array<{ id: string; name: string }>;
   onAddSet: (name: string) => void;
   onDeleteSet: (setId: string) => void;
   onRenameSet: (setId: string, newName: string) => void;
   onToggleSetActive: (setId: string) => void;
+  onToggleSetGlobal: (setId: string) => void;
   onAddActivity: (setId: string, name: string, points: number) => void;
   onDeleteActivity: (setId: string, activityId: string) => void;
   onEditActivity: (setId: string, activityId: string, name: string, points: number) => void;
   onReorderActivities: (setId: string, activityIds: string[]) => void;
   onAddBonus: (setId: string, activityId: string, name: string, points: number) => void;
   onDeleteBonus: (setId: string, activityId: string) => void;
+  onAddUser: (name: string) => void;
+  onDeleteUser: (userId: string) => void;
   onExport: () => void;
   onImport: (json: string) => void;
 }
 
 export default function Settings({
   sets,
+  users,
   onAddSet,
   onDeleteSet,
   onRenameSet,
   onToggleSetActive,
+  onToggleSetGlobal,
   onAddActivity,
   onDeleteActivity,
   onEditActivity,
   onReorderActivities,
   onAddBonus,
   onDeleteBonus,
+  onAddUser,
+  onDeleteUser,
   onExport,
   onImport,
 }: SettingsProps) {
@@ -44,6 +52,7 @@ export default function Settings({
   const [bonusFormActivityId, setBonusFormActivityId] = useState<string | null>(null);
   const [newBonusName, setNewBonusName] = useState('');
   const [newBonusPoints, setNewBonusPoints] = useState('');
+  const [newUserName, setNewUserName] = useState('');
   const dragItem = useRef<number | null>(null);
   const dragOverItem = useRef<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -142,6 +151,53 @@ export default function Settings({
     <div className="space-y-6">
       <h2 className="text-lg font-semibold text-gray-200">Settings</h2>
 
+      {/* Users */}
+      <div className="p-4 rounded-lg bg-gray-900 border border-gray-800">
+        <h3 className="text-sm font-medium text-gray-400 mb-3">Users</h3>
+        <div className="space-y-2 mb-3">
+          <div className="flex items-center justify-between p-2 rounded bg-gray-800">
+            <span className="text-gray-200 text-sm">You (default)</span>
+          </div>
+          {users.map(u => (
+            <div key={u.id} className="flex items-center justify-between p-2 rounded bg-gray-800">
+              <span className="text-gray-200 text-sm">{u.name}</span>
+              <button
+                onClick={() => onDeleteUser(u.id)}
+                className="text-red-400 hover:text-red-300 text-xs"
+              >
+                Delete
+              </button>
+            </div>
+          ))}
+        </div>
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={newUserName}
+            onChange={e => setNewUserName(e.target.value)}
+            placeholder="New user name"
+            className="flex-1 px-3 py-2 rounded-lg bg-gray-800 border border-gray-700 text-gray-200 text-sm placeholder-gray-500 focus:outline-none focus:border-purple-500"
+            onKeyDown={e => {
+              if (e.key === 'Enter' && newUserName.trim()) {
+                onAddUser(newUserName.trim());
+                setNewUserName('');
+              }
+            }}
+          />
+          <button
+            onClick={() => {
+              if (newUserName.trim()) {
+                onAddUser(newUserName.trim());
+                setNewUserName('');
+              }
+            }}
+            className="px-3 py-2 rounded-lg bg-purple-600 hover:bg-purple-500 text-white text-sm font-medium transition-colors"
+          >
+            Add
+          </button>
+        </div>
+      </div>
+
       {/* Backup / Restore */}
       <div className="p-4 rounded-lg bg-gray-900 border border-gray-800">
         <h3 className="text-sm font-medium text-gray-400 mb-3">Backup / Restore</h3>
@@ -238,6 +294,13 @@ export default function Settings({
                       Rename
                     </button>
                   )}
+                  <button
+                    onClick={(e) => { e.stopPropagation(); onToggleSetGlobal(set.id); }}
+                    className={`text-sm px-2 ${set.global ? 'text-cyan-400 hover:text-cyan-300' : 'text-gray-400 hover:text-gray-200'}`}
+                    title={set.global ? 'Set is global (visible to all users)' : 'Set is private'}
+                  >
+                    {set.global ? 'Global' : 'Private'}
+                  </button>
                   <button
                     onClick={(e) => { e.stopPropagation(); onToggleSetActive(set.id); }}
                     className={`text-sm px-2 ${set.deactivated ? 'text-green-400 hover:text-green-300' : 'text-gray-400 hover:text-gray-200'}`}

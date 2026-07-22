@@ -21,14 +21,12 @@ interface LeaderboardProps {
   sets: ActivitySet[];
   rivals: Rival[];
   rivalSubmissions: Submission[];
-  onAddUser: (name: string) => void;
   onDeleteUser: (userId: string) => void;
   onAddRival: (name: string, personality: Rival['personality'], anomalyChance: number) => void;
   onDeleteRival: (rivalId: string) => void;
   onUpdateRivals: (submissions: Submission[]) => void;
 }
 
-const GENERATION_COOLDOWN_MS = 30000;
 const USER_COLOR_MAP: Record<string, string> = {
   '__me__': '#ef4444',
   'Painter': '#22d3ee',
@@ -48,7 +46,6 @@ export default function Leaderboard({
   sets,
   rivals,
   rivalSubmissions,
-  onAddUser,
   onDeleteUser,
   onAddRival,
   onDeleteRival,
