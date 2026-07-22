@@ -7,6 +7,7 @@ import ActivityList from './components/ActivityList';
 import Statistics from './components/Statistics';
 import Settings from './components/Settings';
 import Leaderboard from './components/Leaderboard';
+import ProgressRing from './components/ProgressRing';
 
 function App() {
   const [data, setData] = useState<AppData>({ sets: [], submissions: [], users: [], rivals: [], rivalSubmissions: [] });
@@ -327,6 +328,18 @@ function App() {
     });
   }, [data.sets, currentUserId, isCurrentUser]);
 
+  const todayMaxPoints = useMemo(() => {
+    return mySets
+      .filter(s => !s.deactivated)
+      .reduce((sum, s) => sum + s.activities.reduce((aSum, a) => aSum + a.points + (a.bonus?.points || 0), 0), 0);
+  }, [mySets]);
+
+  const todayEarnedPoints = useMemo(() => {
+    return mySubmissions
+      .filter(s => s.date === today)
+      .reduce((sum, s) => sum + s.totalPoints, 0);
+  }, [mySubmissions, today]);
+
   const { currentStreak, longestStreak, todaySubmitted } = useMemo(() => {
     const dates = [...new Set(mySubmissions.map(s => s.date))].sort().reverse();
     if (dates.length === 0) return { currentStreak: 0, longestStreak: 0, todaySubmitted: false };
@@ -442,28 +455,44 @@ function App() {
             />
           ) : (
             <>
-              {mySubmissions.length > 0 && (
-                <div className="flex gap-3 mb-4">
-                  <div className="flex-1 p-3 rounded-lg bg-gray-900 border border-gray-800 text-center">
-                    <div className="text-gray-500 text-xs mb-1">STREAK</div>
-                    <div className={`text-2xl font-bold ${currentStreak > 0 ? 'text-amber-400' : 'text-gray-600'}`}>
-                      {currentStreak}
+              <div className="flex items-center gap-4 mb-4 p-4 rounded-lg bg-gray-900 border border-gray-800">
+                <ProgressRing current={todayEarnedPoints} max={todayMaxPoints} />
+                <div className="flex-1 space-y-2">
+                  <div className="text-sm text-gray-400">
+                    {todayMaxPoints === 0 ? (
+                      'No activities yet'
+                    ) : todaySubmitted ? (
+                      todayEarnedPoints >= todayMaxPoints ? (
+                        <span className="text-green-400 font-medium">Perfect day!</span>
+                      ) : (
+                        <span>Good work today</span>
+                      )
+                    ) : (
+                      <span className="text-gray-500">Start your day</span>
+                    )}
+                  </div>
+                  <div className="flex gap-3">
+                    <div className="flex-1 text-center">
+                      <div className="text-gray-500 text-xs mb-1">STREAK</div>
+                      <div className={`text-xl font-bold ${currentStreak > 0 ? 'text-amber-400' : 'text-gray-600'}`}>
+                        {currentStreak}
+                      </div>
+                      <div className="text-gray-600 text-xs">{currentStreak === 1 ? 'day' : 'days'}</div>
                     </div>
-                    <div className="text-gray-600 text-xs">{currentStreak === 1 ? 'day' : 'days'}</div>
-                  </div>
-                  <div className="flex-1 p-3 rounded-lg bg-gray-900 border border-gray-800 text-center">
-                    <div className="text-gray-500 text-xs mb-1">BEST</div>
-                    <div className="text-2xl font-bold text-gray-400">{longestStreak}</div>
-                    <div className="text-gray-600 text-xs">{longestStreak === 1 ? 'day' : 'days'}</div>
-                  </div>
-                  <div className="flex-1 p-3 rounded-lg bg-gray-900 border border-gray-800 text-center">
-                    <div className="text-gray-500 text-xs mb-1">TODAY</div>
-                    <div className={`text-2xl font-bold ${todaySubmitted ? 'text-green-400' : 'text-gray-600'}`}>
-                      {todaySubmitted ? 'Done' : '---'}
+                    <div className="flex-1 text-center">
+                      <div className="text-gray-500 text-xs mb-1">BEST</div>
+                      <div className="text-xl font-bold text-gray-400">{longestStreak}</div>
+                      <div className="text-gray-600 text-xs">{longestStreak === 1 ? 'day' : 'days'}</div>
+                    </div>
+                    <div className="flex-1 text-center">
+                      <div className="text-gray-500 text-xs mb-1">TODAY</div>
+                      <div className={`text-xl font-bold ${todaySubmitted ? 'text-green-400' : 'text-gray-600'}`}>
+                        {todaySubmitted ? 'Done' : '---'}
+                      </div>
                     </div>
                   </div>
                 </div>
-              )}
+              </div>
               <SetSelection
                 sets={mySets}
                 onSelectSet={handleSelectSet}

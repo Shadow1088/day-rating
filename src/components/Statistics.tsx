@@ -13,6 +13,7 @@ import {
   Legend,
 } from 'recharts';
 import { format, subDays, parseISO, eachDayOfInterval, startOfDay } from 'date-fns';
+import Heatmap from './Heatmap';
 
 interface StatisticsProps {
   sets: ActivitySet[];
@@ -313,6 +314,14 @@ export default function Statistics({ sets, submissions }: StatisticsProps) {
           </div>
         )}
       </div>
+
+      {/* Heatmap Calendar */}
+      {submissions.length > 0 && (
+        <div className="p-4 rounded-lg bg-gray-900 border border-gray-800">
+          <h3 className="text-sm font-medium text-gray-400 mb-4">Activity Heatmap</h3>
+          <Heatmap submissions={submissions} weeks={16} />
+        </div>
+      )}
 
       {/* Development Chart */}
       {submissions.length > 0 && (
