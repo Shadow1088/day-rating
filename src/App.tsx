@@ -8,6 +8,8 @@ import Statistics from './components/Statistics';
 import Settings from './components/Settings';
 import Leaderboard from './components/Leaderboard';
 import ProgressRing from './components/ProgressRing';
+import WeeklyOverview from './components/WeeklyOverview';
+import Achievements from './components/Achievements';
 
 function App() {
   const [data, setData] = useState<AppData>({ sets: [], submissions: [], users: [], rivals: [], rivalSubmissions: [] });
@@ -493,6 +495,8 @@ function App() {
                   </div>
                 </div>
               </div>
+              <WeeklyOverview submissions={mySubmissions} />
+              <Achievements submissions={mySubmissions} />
               <SetSelection
                 sets={mySets}
                 onSelectSet={handleSelectSet}
