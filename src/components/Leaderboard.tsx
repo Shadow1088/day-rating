@@ -43,7 +43,7 @@ export default function Leaderboard({
   onDeleteRival,
   onUpdateRivals,
 }: LeaderboardProps) {
-  const [timeframe, setTimeframe] = useState<'week' | 'month' | 'all'>('week');
+  const [timeframe, setTimeframe] = useState<'day' | 'week' | 'month' | 'all'>('week');
   const [showCreator, setShowCreator] = useState(false);
   const [selectedRival, setSelectedRival] = useState<Rival | null>(null);
   const [showChart, setShowChart] = useState(false);
@@ -71,6 +71,10 @@ export default function Leaderboard({
 
   const getDateRange = () => {
     const now = new Date();
+    if (timeframe === 'day') {
+      const today = new Date(now);
+      return today.toISOString().split('T')[0];
+    }
     if (timeframe === 'week') {
       const weekAgo = new Date(now);
       weekAgo.setDate(weekAgo.getDate() - 7);
@@ -223,7 +227,7 @@ export default function Leaderboard({
       </div>
 
       <div className="flex gap-2 mb-4">
-        {(['week', 'month', 'all'] as const).map(tf => (
+        {(['day', 'week', 'month', 'all'] as const).map(tf => (
           <button
             key={tf}
             onClick={() => setTimeframe(tf)}
@@ -233,7 +237,7 @@ export default function Leaderboard({
                 : 'bg-gray-900 text-gray-400 hover:text-white border border-gray-800'
             }`}
           >
-            {tf === 'week' ? '7 Days' : tf === 'month' ? '30 Days' : 'All Time'}
+            {tf === 'day' ? 'Today' : tf === 'week' ? '7 Days' : tf === 'month' ? '30 Days' : 'All Time'}
           </button>
         ))}
       </div>

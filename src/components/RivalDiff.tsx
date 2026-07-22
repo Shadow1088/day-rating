@@ -11,10 +11,13 @@ interface RivalDiffProps {
 }
 
 export default function RivalDiff({ rival, mySubmissions, rivalSubmissions, sets, onClose }: RivalDiffProps) {
-  const [timeframe, setTimeframe] = useState<'week' | 'month' | 'all'>('week');
+  const [timeframe, setTimeframe] = useState<'day' | 'week' | 'month' | 'all'>('week');
 
   const getDateRange = () => {
     const now = new Date();
+    if (timeframe === 'day') {
+      return now.toISOString().split('T')[0];
+    }
     if (timeframe === 'week') {
       const d = new Date(now);
       d.setDate(d.getDate() - 7);
@@ -162,7 +165,7 @@ export default function RivalDiff({ rival, mySubmissions, rivalSubmissions, sets
             <button onClick={onClose} className="text-gray-500 hover:text-white">✕</button>
           </div>
           <div className="flex gap-2 mt-3">
-            {(['week', 'month', 'all'] as const).map(tf => (
+            {(['day', 'week', 'month', 'all'] as const).map(tf => (
               <button
                 key={tf}
                 onClick={() => setTimeframe(tf)}
@@ -172,7 +175,7 @@ export default function RivalDiff({ rival, mySubmissions, rivalSubmissions, sets
                     : 'bg-gray-800 text-gray-400 hover:text-white border border-gray-700'
                 }`}
               >
-                {tf === 'week' ? '7 Days' : tf === 'month' ? '30 Days' : 'All Time'}
+                {tf === 'day' ? 'Today' : tf === 'week' ? '7 Days' : tf === 'month' ? '30 Days' : 'All Time'}
               </button>
             ))}
           </div>
