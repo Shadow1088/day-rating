@@ -1,5 +1,6 @@
 const DEFAULT_SETTINGS = {
-  serverUrl: 'http://localhost:3001',
+  supabaseUrl: 'https://vbostqafjafniznigsjt.supabase.co',
+  supabaseKey: 'sb_publishable_T02bqH8egfO_xyh8_4vpNg_DlTv6dzL',
   reminderHour: 21,
   reminderMinute: 0,
   enabled: false,
@@ -63,19 +64,24 @@ async function checkReminder() {
 
   if (currentMinutes < targetMinutes) return;
 
-  // Fetch data from server
+  // Query Supabase for today's submissions
   try {
-    const res = await fetch(`${settings.serverUrl}/api/data`);
+    const url = `${settings.supabaseUrl}/rest/v1/submissions?date=eq.${today}&select=id`;
+    const res = await fetch(url, {
+      headers: {
+        'apikey': settings.supabaseKey,
+        'Authorization': `Bearer ${settings.supabaseKey}`,
+      },
+    });
     if (!res.ok) return;
 
     const data = await res.json();
-    const hasSubmissionToday = data.submissions?.some(s => s.date === today);
 
-    if (!hasSubmissionToday) {
+    if (!data || data.length === 0) {
       fireNotification();
     }
   } catch {
-    // Server unreachable, silently skip
+    // Supabase unreachable, silently skip
   }
 }
 
@@ -98,6 +104,6 @@ function fireNotification() {
 // Open app when notification is clicked
 api.notifications.onClicked.addListener((id) => {
   if (id === 'day-rating-reminder') {
-    api.tabs.create({ url: settings.serverUrl });
+    api.tabs.create({ url: 'https://day-rating.vercel.app' });
   }
 });

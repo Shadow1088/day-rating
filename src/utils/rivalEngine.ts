@@ -250,6 +250,7 @@ export function generateRivalDay(
         activitiesChecked,
         bonusesChecked,
         totalPoints: setTotal,
+        rivalId: rival.id,
       });
       dayTotal += setTotal;
     }

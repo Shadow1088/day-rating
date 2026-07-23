@@ -1,9 +1,9 @@
 import { useState, useRef } from 'react';
-import type { ActivitySet } from '../types';
+import type { ActivitySet, User } from '../types';
 
 interface SettingsProps {
   sets: ActivitySet[];
-  users: Array<{ id: string; name: string }>;
+  users: User[];
   onAddSet: (name: string) => void;
   onDeleteSet: (setId: string) => void;
   onRenameSet: (setId: string, newName: string) => void;
@@ -17,6 +17,8 @@ interface SettingsProps {
   onDeleteBonus: (setId: string, activityId: string) => void;
   onAddUser: (name: string) => void;
   onDeleteUser: (userId: string) => void;
+  onSetUserPin: (userId: string, pin: string) => void;
+  onRemoveUserPin: (userId: string) => void;
   onExport: () => void;
   onImport: (json: string) => void;
 }
@@ -37,6 +39,8 @@ export default function Settings({
   onDeleteBonus,
   onAddUser,
   onDeleteUser,
+  onSetUserPin,
+  onRemoveUserPin,
   onExport,
   onImport,
 }: SettingsProps) {
@@ -53,6 +57,8 @@ export default function Settings({
   const [newBonusName, setNewBonusName] = useState('');
   const [newBonusPoints, setNewBonusPoints] = useState('');
   const [newUserName, setNewUserName] = useState('');
+  const [editingPinUserId, setEditingPinUserId] = useState<string | null>(null);
+  const [newPin, setNewPin] = useState('');
   const dragItem = useRef<number | null>(null);
   const dragOverItem = useRef<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -159,14 +165,77 @@ export default function Settings({
             <span className="text-gray-200 text-sm">You (default)</span>
           </div>
           {users.map(u => (
-            <div key={u.id} className="flex items-center justify-between p-2 rounded bg-gray-800">
-              <span className="text-gray-200 text-sm">{u.name}</span>
-              <button
-                onClick={() => onDeleteUser(u.id)}
-                className="text-red-400 hover:text-red-300 text-xs"
-              >
-                Delete
-              </button>
+            <div key={u.id} className="p-2 rounded bg-gray-800 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-gray-200 text-sm">{u.name}</span>
+                <div className="flex items-center gap-2">
+                  {editingPinUserId === u.id ? (
+                    <div className="flex items-center gap-1">
+                      <input
+                        type="password"
+                        inputMode="numeric"
+                        maxLength={6}
+                        value={newPin}
+                        onChange={e => setNewPin(e.target.value)}
+                        placeholder="PIN"
+                        autoFocus
+                        className="w-16 px-2 py-1 rounded bg-gray-700 border border-gray-600 text-gray-200 text-xs text-center focus:outline-none focus:border-purple-500"
+                        onKeyDown={e => {
+                          if (e.key === 'Enter' && newPin.length >= 4) {
+                            onSetUserPin(u.id, newPin);
+                            setEditingPinUserId(null);
+                            setNewPin('');
+                          }
+                        }}
+                      />
+                      <button
+                        onClick={() => {
+                          if (newPin.length >= 4) {
+                            onSetUserPin(u.id, newPin);
+                            setEditingPinUserId(null);
+                            setNewPin('');
+                          }
+                        }}
+                        className="text-green-400 hover:text-green-300 text-xs"
+                      >
+                        Set
+                      </button>
+                      <button
+                        onClick={() => { setEditingPinUserId(null); setNewPin(''); }}
+                        className="text-gray-400 hover:text-gray-200 text-xs"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <button
+                        onClick={() => { setEditingPinUserId(u.id); setNewPin(''); }}
+                        className="text-gray-400 hover:text-gray-200 text-xs"
+                      >
+                        {u.pin ? 'Change PIN' : 'Set PIN'}
+                      </button>
+                      {u.pin && (
+                        <button
+                          onClick={() => onRemoveUserPin(u.id)}
+                          className="text-amber-400 hover:text-amber-300 text-xs"
+                        >
+                          Remove PIN
+                        </button>
+                      )}
+                    </>
+                  )}
+                  <button
+                    onClick={() => onDeleteUser(u.id)}
+                    className="text-red-400 hover:text-red-300 text-xs"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+              {u.pin && (
+                <div className="text-xs text-gray-500">🔒 PIN protected</div>
+              )}
             </div>
           ))}
         </div>

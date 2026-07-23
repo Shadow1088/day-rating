@@ -27,6 +27,7 @@
       margin-bottom: 4px;
     }
     input[type="text"],
+    input[type="password"],
     input[type="number"],
     input[type="time"] {
       width: 100%;
@@ -113,8 +114,13 @@
   <h1>Day Rating Reminder</h1>
 
   <div class="field">
-    <label>Server URL</label>
-    <input type="text" id="serverUrl" placeholder="http://192.168.x.x:3001">
+    <label>Supabase URL</label>
+    <input type="text" id="supabaseUrl" placeholder="https://xxx.supabase.co">
+  </div>
+
+  <div class="field">
+    <label>Supabase Anon Key</label>
+    <input type="password" id="supabaseKey" placeholder="sb_publishable_...">
   </div>
 
   <div class="field">

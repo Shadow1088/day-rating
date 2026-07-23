@@ -29,12 +29,14 @@ export interface Submission {
   totalPoints: number;
   note?: string;
   userId?: string;
+  rivalId?: string;
 }
 
 export interface User {
   id: string;
   name: string;
   avatar?: string;
+  pin?: string;
 }
 
 export interface RivalPersonality {

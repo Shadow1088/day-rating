@@ -1,6 +1,7 @@
 const api = typeof browser !== 'undefined' ? browser : chrome;
 
-const serverUrlInput = document.getElementById('serverUrl');
+const supabaseUrlInput = document.getElementById('supabaseUrl');
+const supabaseKeyInput = document.getElementById('supabaseKey');
 const reminderTimeInput = document.getElementById('reminderTime');
 const enabledInput = document.getElementById('enabled');
 const testBtn = document.getElementById('testBtn');
@@ -12,7 +13,8 @@ try {
   api.storage.local.get('settings', (result) => {
     try {
       const s = (result && result.settings) || {};
-      serverUrlInput.value = s.serverUrl || 'http://localhost:3001';
+      supabaseUrlInput.value = s.supabaseUrl || 'https://vbostqafjafniznigsjt.supabase.co';
+      supabaseKeyInput.value = s.supabaseKey || '';
       enabledInput.checked = s.enabled || false;
 
       const hour = s.reminderHour ?? 21;
@@ -24,7 +26,6 @@ try {
   });
 } catch (e) {
   console.error('Storage read failed:', e);
-  serverUrlInput.value = 'http://localhost:3001';
 }
 
 // Save on any change
@@ -32,7 +33,8 @@ function save() {
   try {
     const [hour, min] = reminderTimeInput.value.split(':').map(Number);
     const settings = {
-      serverUrl: serverUrlInput.value.replace(/\/+$/, ''),
+      supabaseUrl: supabaseUrlInput.value.replace(/\/+$/, ''),
+      supabaseKey: supabaseKeyInput.value.trim(),
       reminderHour: hour ?? 21,
       reminderMinute: min ?? 0,
       enabled: enabledInput.checked,
@@ -43,7 +45,8 @@ function save() {
   }
 }
 
-serverUrlInput.addEventListener('change', save);
+supabaseUrlInput.addEventListener('change', save);
+supabaseKeyInput.addEventListener('change', save);
 reminderTimeInput.addEventListener('change', save);
 enabledInput.addEventListener('change', save);
 
@@ -51,13 +54,35 @@ testBtn.addEventListener('click', async () => {
   statusDiv.textContent = 'Connecting...';
   statusDiv.className = 'status';
 
+  const url = supabaseUrlInput.value.replace(/\/+$/, '');
+  const key = supabaseKeyInput.value.trim();
+
+  if (!url || !key) {
+    statusDiv.textContent = 'Fill in Supabase URL and API key.';
+    statusDiv.className = 'status err';
+    return;
+  }
+
   try {
-    const res = await fetch(serverUrlInput.value.replace(/\/+$/, '') + '/api/data');
+    const res = await fetch(`${url}/rest/v1/submissions?select=id&limit=1`, {
+      headers: {
+        'apikey': key,
+        'Authorization': `Bearer ${key}`,
+      },
+    });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
-    const sets = data.sets?.length ?? 0;
-    const subs = data.submissions?.length ?? 0;
-    statusDiv.textContent = `Connected. ${sets} set(s), ${subs} submission(s).`;
+
+    // Also get set count
+    const setsRes = await fetch(`${url}/rest/v1/activity_sets?select=id&limit=1`, {
+      headers: {
+        'apikey': key,
+        'Authorization': `Bearer ${key}`,
+      },
+    });
+    const setsData = setsRes.ok ? await setsRes.json() : [];
+
+    statusDiv.textContent = `Connected. Database OK.`;
     statusDiv.className = 'status ok';
   } catch (e) {
     statusDiv.textContent = `Failed: ${e.message}`;

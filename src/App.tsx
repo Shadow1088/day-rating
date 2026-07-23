@@ -10,12 +10,14 @@ import Leaderboard from './components/Leaderboard';
 import ProgressRing from './components/ProgressRing';
 import WeeklyOverview from './components/WeeklyOverview';
 import Achievements from './components/Achievements';
+import LoginScreen from './components/LoginScreen';
 
 function App() {
   const [data, setData] = useState<AppData>({ sets: [], submissions: [], users: [], rivals: [], rivalSubmissions: [] });
   const [loaded, setLoaded] = useState(false);
   const [currentView, setCurrentView] = useState<View>('sets');
   const [selectedSetId, setSelectedSetId] = useState<string | null>(null);
+  const [showLogin, setShowLogin] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | undefined>(() => {
     const stored = localStorage.getItem('day-rating-current-user');
     return stored || undefined;
@@ -23,28 +25,12 @@ function App() {
 
   useEffect(() => {
     const loadDataAndRivals = async () => {
-      let appData: AppData;
-      const stored = localStorage.getItem('day-rating-data');
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        await saveData(parsed);
-        localStorage.removeItem('day-rating-data');
-        appData = { ...parsed, rivals: parsed.rivals ?? [], rivalSubmissions: parsed.rivalSubmissions ?? [] };
-      } else {
-        appData = await loadData();
-        appData = { ...appData, rivals: appData.rivals ?? [], rivalSubmissions: appData.rivalSubmissions ?? [] };
-      }
-      setData(appData);
-
-      // Migrate rival submissions from localStorage if present
-      const storedRivals = localStorage.getItem('rival-submissions');
-      if (storedRivals) {
-        const migrated = JSON.parse(storedRivals);
-        setData(prev => ({ ...prev, rivalSubmissions: [...prev.rivalSubmissions, ...migrated] }));
-        localStorage.removeItem('rival-submissions');
-        localStorage.removeItem('leaderboard-last-gen');
-      }
-
+      const appData = await loadData();
+      setData({
+        ...appData,
+        rivals: appData.rivals ?? [],
+        rivalSubmissions: appData.rivalSubmissions ?? [],
+      });
       setLoaded(true);
     };
     loadDataAndRivals();
@@ -384,23 +370,48 @@ function App() {
     setCurrentUserId(userId);
     setSelectedSetId(null);
     setCurrentView('sets');
+    setShowLogin(false);
   };
+
+  const handleSetUserPin = (userId: string, pin: string) => {
+    setData(prev => ({
+      ...prev,
+      users: prev.users.map(u => u.id === userId ? { ...u, pin } : u),
+    }));
+  };
+
+  const handleRemoveUserPin = (userId: string) => {
+    setData(prev => ({
+      ...prev,
+      users: prev.users.map(u => u.id === userId ? { ...u, pin: undefined } : u),
+    }));
+  };
+
+  if (!loaded) {
+    return <div className="min-h-screen bg-gray-950 flex items-center justify-center text-gray-400">Loading...</div>;
+  }
+
+  if (showLogin) {
+    return <LoginScreen users={data.users} onSelectUser={handleSwitchUser} />;
+  }
 
   return (
     <div className="min-h-screen bg-gray-950 text-gray-100">
       <header className="bg-gray-900 border-b border-gray-800 px-4 py-4">
         <div className="flex items-center justify-between mb-3">
           <h1 className="text-xl font-bold text-purple-400">Day Rating</h1>
-          <select
-            value={currentUserId || ''}
-            onChange={(e) => handleSwitchUser(e.target.value || undefined)}
-            className="bg-gray-800 border border-gray-700 text-gray-200 text-sm rounded px-2 py-1 cursor-pointer"
+          <button
+            onClick={() => setShowLogin(true)}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-800 border border-gray-700 text-gray-300 text-sm hover:border-purple-500 hover:text-white transition-colors cursor-pointer"
           >
-            <option value="">You</option>
-            {data.users.map(u => (
-              <option key={u.id} value={u.id}>{u.name}</option>
-            ))}
-          </select>
+            <span className="text-base">
+              {isCurrentUser ? '😎' : data.users.find(u => u.id === currentUserId)?.name?.charAt(0) ?? '?'}
+            </span>
+            <span>{isCurrentUser ? 'You' : data.users.find(u => u.id === currentUserId)?.name ?? 'Unknown'}</span>
+            <svg className="w-3 h-3 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
         </div>
         <nav className="flex justify-center gap-6 mt-3">
           <button
@@ -496,11 +507,13 @@ function App() {
                 </div>
               </div>
               <WeeklyOverview submissions={mySubmissions} />
-              <Achievements submissions={mySubmissions} />
               <SetSelection
                 sets={mySets}
                 onSelectSet={handleSelectSet}
               />
+              <div className="mt-4">
+                <Achievements submissions={mySubmissions} />
+              </div>
             </>
           )
         )}
@@ -529,6 +542,8 @@ function App() {
             onDeleteBonus={handleDeleteBonus}
             onAddUser={handleAddUser}
             onDeleteUser={handleDeleteUser}
+            onSetUserPin={handleSetUserPin}
+            onRemoveUserPin={handleRemoveUserPin}
             onExport={handleExport}
             onImport={handleImport}
           />

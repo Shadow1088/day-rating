@@ -7,10 +7,12 @@
     "dev": "concurrently \"vite\" \"tsx watch server.ts\"",
     "build": "tsc -b && vite build",
     "start": "npm run build && tsx server.ts",
+    "migrate": "tsx scripts/migrate.ts",
     "lint": "oxlint",
     "preview": "vite preview"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.110.8",
     "date-fns": "^4.4.0",
     "express": "^5.2.1",
     "react": "^19.2.7",
