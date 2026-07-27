@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { loadData, saveData } from './dataService';
 import type { AppData, ActivitySet, Submission, View, Rival, RivalPersonality, User } from './types';
 import { format, subDays, parseISO } from 'date-fns';
@@ -23,6 +23,7 @@ function App() {
     const stored = localStorage.getItem('day-rating-current-user');
     return stored || undefined;
   });
+  const initialLoadDone = useRef(false);
 
   useEffect(() => {
     const loadDataAndRivals = async () => {
@@ -38,7 +39,12 @@ function App() {
   }, []);
 
   useEffect(() => {
-    if (loaded) saveData(data);
+    if (loaded) {
+      if (initialLoadDone.current) {
+        saveData(data);
+      }
+      initialLoadDone.current = true;
+    }
   }, [data, loaded]);
 
   useEffect(() => {
