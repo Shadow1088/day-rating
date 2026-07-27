@@ -3,6 +3,8 @@ import type { ActivitySet, Submission } from '../types';
 
 interface ActivityListProps {
   set: ActivitySet;
+  selectedDate: string;
+  onDateChange: (date: string) => void;
   existingSubmission?: Submission;
   onBack: () => void;
   onSubmit: (
@@ -14,7 +16,7 @@ interface ActivityListProps {
   ) => void;
 }
 
-export default function ActivityList({ set, existingSubmission, onBack, onSubmit }: ActivityListProps) {
+export default function ActivityList({ set, selectedDate, onDateChange, existingSubmission, onBack, onSubmit }: ActivityListProps) {
   const [checkedActivities, setCheckedActivities] = useState<Set<string>>(() => {
     if (existingSubmission) return new Set(existingSubmission.activitiesChecked);
     return new Set();
@@ -87,6 +89,9 @@ export default function ActivityList({ set, existingSubmission, onBack, onSubmit
     );
   };
 
+  const today = new Date().toISOString().split('T')[0];
+  const isToday = selectedDate === today;
+
   return (
     <div>
       <div className="flex items-center gap-3 mb-4">
@@ -97,9 +102,15 @@ export default function ActivityList({ set, existingSubmission, onBack, onSubmit
           ← Back
         </button>
         <h2 className="text-lg font-semibold text-gray-200">{set.name}</h2>
-        {existingSubmission && (
-          <span className="text-xs text-gray-500 ml-auto">Editing today's submission</span>
-        )}
+        <div className="ml-auto flex items-center gap-2">
+          <input
+            type="date"
+            value={selectedDate}
+            onChange={e => onDateChange(e.target.value)}
+            max={today}
+            className="bg-gray-800 border border-gray-700 text-gray-300 text-sm rounded px-2 py-1 cursor-pointer focus:outline-none focus:border-purple-500"
+          />
+        </div>
       </div>
 
       <div className="space-y-1">
@@ -168,7 +179,7 @@ export default function ActivityList({ set, existingSubmission, onBack, onSubmit
             onClick={handleSubmit}
             className="w-full py-2 px-4 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-medium transition-colors"
           >
-            {existingSubmission ? 'Update Submission' : 'Submit Day'}
+            {existingSubmission ? 'Update' : isToday ? 'Submit Day' : 'Backfill Day'}
           </button>
         </div>
       )}

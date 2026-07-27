@@ -60,9 +60,20 @@ export default function Leaderboard({
     const today = new Date().toISOString().split('T')[0];
     const newSubmissions: Submission[] = [];
 
+    // Collect all dates where the user has submissions
+    const myDates = [...new Set(submissions.map(s => s.date))];
+
     for (const rival of rivals) {
+      for (const date of myDates) {
+        const hasData = rivalSubmissions.some(s => s.id.startsWith(rival.id) && s.date === date);
+        if (!hasData) {
+          const { submissions: daySubs } = generateRivalDay(rival, date, sets);
+          newSubmissions.push(...daySubs);
+        }
+      }
+      // Also ensure today is covered (even if user hasn't submitted yet)
       const hasToday = rivalSubmissions.some(s => s.id.startsWith(rival.id) && s.date === today);
-      if (!hasToday) {
+      if (!hasToday && !myDates.includes(today)) {
         const { submissions: daySubs } = generateRivalDay(rival, today, sets);
         newSubmissions.push(...daySubs);
       }
@@ -71,7 +82,7 @@ export default function Leaderboard({
     if (newSubmissions.length > 0) {
       onUpdateRivals(newSubmissions);
     }
-  }, [rivals, rivalSubmissions, sets, onUpdateRivals]);
+  }, [submissions, rivals, rivalSubmissions, sets, onUpdateRivals]);
 
   useEffect(() => {
     generateTodayScores();

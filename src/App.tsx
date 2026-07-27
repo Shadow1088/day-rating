@@ -17,6 +17,7 @@ function App() {
   const [loaded, setLoaded] = useState(false);
   const [currentView, setCurrentView] = useState<View>('sets');
   const [selectedSetId, setSelectedSetId] = useState<string | null>(null);
+  const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [showLogin, setShowLogin] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | undefined>(() => {
     const stored = localStorage.getItem('day-rating-current-user');
@@ -52,16 +53,18 @@ function App() {
 
   const handleSelectSet = (setId: string) => {
     setSelectedSetId(setId);
+    setSelectedDate(new Date().toISOString().split('T')[0]);
   };
 
   const handleBackToSets = () => {
     setSelectedSetId(null);
+    setSelectedDate(new Date().toISOString().split('T')[0]);
   };
 
   const handleSubmit = (setId: string, activitiesChecked: string[], bonusesChecked: string[], totalPoints: number, note: string) => {
     const newSubmission: Submission = {
       id: Date.now().toString(),
-      date: today,
+      date: selectedDate,
       setId,
       activitiesChecked,
       bonusesChecked,
@@ -71,7 +74,7 @@ function App() {
     };
     setData(prev => {
       const existingIndex = prev.submissions.findIndex(s =>
-        s.date === today && s.setId === setId && (isCurrentUser ? !s.userId : s.userId === currentUserId)
+        s.date === selectedDate && s.setId === setId && (isCurrentUser ? !s.userId : s.userId === currentUserId)
       );
       if (existingIndex !== -1) {
         const updated = [...prev.submissions];
@@ -81,6 +84,7 @@ function App() {
       return { ...prev, submissions: [...prev.submissions, newSubmission] };
     });
     setSelectedSetId(null);
+    setSelectedDate(new Date().toISOString().split('T')[0]);
   };
 
   const handleRenameSet = (setId: string, newName: string) => {
@@ -462,7 +466,9 @@ function App() {
           selectedSet ? (
             <ActivityList
               set={selectedSet}
-              existingSubmission={mySubmissions.find(s => s.date === today && s.setId === selectedSet.id)}
+              selectedDate={selectedDate}
+              onDateChange={setSelectedDate}
+              existingSubmission={mySubmissions.find(s => s.date === selectedDate && s.setId === selectedSet.id)}
               onBack={handleBackToSets}
               onSubmit={handleSubmit}
             />
