@@ -26,3 +26,5 @@ data.json
 *.sw?
 
 *honorable*
+__pycache__
+*.pyc
