@@ -422,6 +422,14 @@ def _write_doc(cfg, doc_id, text):
     ).execute()
 
 
+def _next_school_day(d):
+    """Return the next day that is not Saturday or Sunday."""
+    d = d + timedelta(days=1)
+    while d.weekday() >= 5:  # Sat=5, Sun=6
+        d += timedelta(days=1)
+    return d
+
+
 def _run_update():
     cfg = _cfg()
     missing = [k for k in ("username", "password", "doc_id", "sa_b64") if not cfg[k]]
@@ -431,14 +439,19 @@ def _run_update():
     session = _login(cfg)
     html = _fetch_calendar(session, cfg)
 
-    days = []
     today = date.today()
-    for day in (today, today + timedelta(days=1)):
+    days = []
+    if today.weekday() < 5:
+        days.append(today)
+    days.append(_next_school_day(today))
+
+    built = []
+    for day in days:
         lessons = _parse_schedule(html, day)
         substitutions = _parse_substitutions(html, day)
-        days.append((day, lessons, substitutions))
+        built.append((day, lessons, substitutions))
 
-    text = _build_comprehension(days)
+    text = _build_comprehension(built)
     _write_doc(cfg, cfg["doc_id"], text)
     return text
 
