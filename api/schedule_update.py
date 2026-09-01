@@ -155,6 +155,19 @@ def _decode_cell_id(cell_id):
     return None, None
 
 
+def _full_subject_name(td, subject):
+    """Return the full subject name from the cell's tooltip title."""
+    m = re.search(r"Tooltip\('([^']*)'", td.get("onmouseover", ""))
+    if m:
+        title = m.group(1).strip()
+        inner = re.search(r"\((.*)\)", title)
+        if inner and inner.group(1).strip():
+            return inner.group(1).strip()
+        if title:
+            return title
+    return subject
+
+
 def _hours_by_day(soup_main):
     hours = {}
     for td in soup_main.find_all("td"):
@@ -175,6 +188,7 @@ def _hours_by_day(soup_main):
         nadpis = td.find("span", class_="KuvBunkaRozvrhNadpis")
         text = td.find("span", class_="KuvBunkaRozvrhText")
         subject = nadpis.get_text(" ", strip=True) if nadpis else ""
+        subject = _full_subject_name(td, subject)
         class_room = text.get_text(" ", strip=True) if text else ""
         classes = " ".join(td.get("class") or [])
         if "KuvSuplovanaHodina" in classes:
