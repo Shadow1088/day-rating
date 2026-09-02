@@ -1,0 +1,17 @@
+name: Keep Supabase Alive
+on:
+  schedule:
+    - cron: "0 * * * *"
+  workflow_dispatch:
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_URL: https://vbostqafjafniznigsjt.supabase.co
+      SUPABASE_KEY: sb_publishable_T02bqH8egfO_xyh8_4vpNg_DlTv6dzL
+    steps:
+      - run: |
+          curl -sS -f -m 15 \
+            -H "apikey: $SUPABASE_KEY" \
+            -H "Authorization: Bearer $SUPABASE_KEY" \
+            "$SUPABASE_URL/rest/v1/submissions?select=id&limit=1"
